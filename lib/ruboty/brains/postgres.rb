@@ -35,16 +35,27 @@ module Ruboty
       private
 
       def save
-        sql = 'UPDATE $1 SET marshal = $2 WHERE botname = $3;'
+        sql = "UPDATE #{namespace} SET marshal = $1 WHERE botname = $2;"
+        str = connection.escape_bytea(Marshal.dump(data))
         connection.prepare('save_statement', sql)
-        connection.exec_prepared('save_statement', [namespace, Marshal.dump(data), botname])
+        connection.exec_prepared('save_statement', [str, botname])
       end
 
       def load
-        sql = 'SELECT marshal FROM $1 WHERE botname = $2;'
+        sql = "SELECT marshal FROM #{namespace} WHERE botname = $1;"
         connection.prepare('load_statement', sql)
-        str = connection.exec_prepared('load_statement', [namespace, botname])
-        Marshal.load(str)
+        result = connection.exec_prepared('load_statement', [botname])
+        if result.count == 0
+          str = connection.escape_bytea(Marshal.dump({}))
+          sql = "INSERT INTO #{namespace} (botname, marshal) VALUES ($1, $2);"
+          connection.prepare('insert_statement', sql)
+
+          connection.exec_prepared('insert_statement', [botname, str])
+          {}
+        else
+
+          Marshal.load(connection.unescape_bytea(result.first['marshal']))
+        end
       end
 
       def sync
@@ -81,15 +92,15 @@ module Ruboty
       end
 
       def user
-        ENV['POSTGRES_USER'] || raise 'ENV["POSTGRES_USER"] is required.'
+        ENV['POSTGRES_USER'] || raise('ENV["POSTGRES_USER"] is required.')
       end
 
       def password
-        ENV['POSTGRES_PASSWORD'] || raise 'ENV["POSTGRES_PASSWORD"] is required.'
+        ENV['POSTGRES_PASSWORD'] || raise('ENV["POSTGRES_PASSWORD"] is required.')
       end
 
       def dbname
-        ENV['POSTGRES_DBNAME'] || raise 'ENV["POSTGRES_DBNAME"] is required.'
+        ENV['POSTGRES_DBNAME'] || raise('ENV["POSTGRES_DBNAME"] is required.')
       end
 
       def namespace
@@ -106,16 +117,24 @@ module Ruboty
 
       def migrate(conn)
         unless relation_exists?(conn)
-          sql = 'CREATE TABLE $1 (botname VARACHAR(240) PRIMARY KEY, marshal TEXT);'
-          conn.prepare('migrate_statement', sql)
-          conn.exec_prepared('migrate_statement', [namespace]
+          sql = "CREATE TABLE #{namespace} (botname VARCHAR(240) PRIMARY KEY, marshal BYTEA);"
+          # conn.prepare('migrate_statement', sql)
+          # conn.exec_prepared('migrate_statement', [namespace])
+          conn.exec(sql)
+          load
         end
       end
 
       def relation_exists?(conn)
-        sql = "SELECT relname FROM pg_class WHERE relkind = 'r' AND relname = '$1';"
+        sql = "SELECT relname FROM pg_class WHERE relkind = 'r' AND relname = $1;"
         conn.prepare('exist_statement', sql)
-        conn.exec_prepared('exist_statement', [namespace]) == namespace
+        result = conn.exec_prepared('exist_statement', [namespace])
+        return false if result.count == 0
+        result.first['relname'] == namespace
+      end
+
+      def column_exists?(conn)
+        sql = "SELECT * FROM #{namespace} WHERE botname = $1;"
       end
     end
   end
