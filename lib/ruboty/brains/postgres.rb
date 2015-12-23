@@ -59,13 +59,17 @@ module Ruboty
       end
 
       def connection
-        @connection ||= PG::connect(
-          host:     host,
-          user:     user,
-          password: password,
-          dbname:   dbname,
-          port:     port
-        )
+        if @connection.nil?
+          @connection = PG::connect(
+            host:     host,
+            user:     user,
+            password: password,
+            dbname:   dbname,
+            port:     port
+          )
+          migrate(@connection)
+        end
+        @connection
       end
 
       def host
@@ -98,6 +102,20 @@ module Ruboty
 
       def interval
         SAVE_INTERVAL
+      end
+
+      def migrate(conn)
+        unless relation_exists?(conn)
+          sql = 'CREATE TABLE $1 (botname VARACHAR(240) PRIMARY KEY, marshal TEXT);'
+          conn.prepare('migrate_statement', sql)
+          conn.exec_prepared('migrate_statement', [namespace]
+        end
+      end
+
+      def relation_exists?(conn)
+        sql = "SELECT relname FROM pg_class WHERE relkind = 'r' AND relname = '$1';"
+        conn.prepare('exist_statement', sql)
+        conn.exec_prepared('exist_statement', [namespace]) == namespace
       end
     end
   end

@@ -25,6 +25,7 @@ store memory of [ruboty](https://github.com/r7kamura/ruboty) in postgresql
 - `POSTGRES_BOTNAME`
     - name of your ruboty (default: ruboty)
     - optional
+    - max length: 240
 
 ## License
 
