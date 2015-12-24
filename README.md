@@ -33,3 +33,5 @@ store memory of [ruboty](https://github.com/r7kamura/ruboty) in postgresql
 ## License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+
+core of implementation refers to [r7kamura/ruboty-redis](https://github.com/r7kamura/ruboty-redis) with :sushi: .
