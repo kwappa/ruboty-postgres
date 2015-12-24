@@ -3,18 +3,16 @@ require 'pg'
 module Ruboty
   module Brains
     class Postgres < Base
-      # sleeps this minutes between save
-      SAVE_INTERVAL = 10
-
       attr_reader :thread
 
-      env :POSTGRES_HOST,      'host of postgres (default: localhost)',       optional: true
-      env :POSTGRES_PORT,      'port number of postgres (default: 5432)',     optional: true
-      env :POSTGRES_USER,      'user name of postgres',                       optional: false
-      env :POSTGRES_PASSWORD,  'password of postgres',                        optional: false
-      env :POSTGRES_DBNAME,    'database name of postgres',                   optional: false
-      env :POSTGRES_NAMESPACE, 'relation name of postgres (default: ruboty)', optional: true
-      env :POSTGRES_BOTNAME,   'name of your ruboty (default: ruboty)',       optional: true
+      env :POSTGRES_HOST,          'host of postgres (default: localhost)',          optional: true
+      env :POSTGRES_PORT,          'port number of postgres (default: 5432)',        optional: true
+      env :POSTGRES_USER,          'user name of postgres',                          optional: false
+      env :POSTGRES_PASSWORD,      'password of postgres',                           optional: false
+      env :POSTGRES_DBNAME,        'database name of postgres',                      optional: false
+      env :POSTGRES_NAMESPACE,     'relation name of postgres (default: ruboty)',    optional: true
+      env :POSTGRES_BOTNAME,       'name of your ruboty (default: ruboty)',          optional: true
+      env :POSTGRES_SAVE_INTERVAL, 'sleep duration between each save (default: 10)', optional: true
 
       def initialize
         super
@@ -107,7 +105,7 @@ module Ruboty
       end
 
       def interval
-        SAVE_INTERVAL
+        ENV['POSTGRES_SAVE_INTERVAL'].to_i || 10
       end
 
       def migrate(conn)

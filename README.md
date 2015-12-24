@@ -26,6 +26,9 @@ store memory of [ruboty](https://github.com/r7kamura/ruboty) in postgresql
     - name of your ruboty (default: ruboty)
     - optional
     - max length: 240
+- `POSTGRES_SAVE_INTERVAL`
+    - sleep duration between each save (default: 10)
+    - optional
 
 ## License
 
