@@ -35,26 +35,20 @@ module Ruboty
       private
 
       def save
-        sql = "UPDATE #{namespace} SET marshal = $1 WHERE botname = $2;"
         str = connection.escape_bytea(Marshal.dump(data))
-        connection.prepare('save_statement', sql)
         connection.exec_prepared('save_statement', [str, botname])
       end
 
       def load
-        sql = "SELECT marshal FROM #{namespace} WHERE botname = $1;"
-        connection.prepare('load_statement', sql)
         result = connection.exec_prepared('load_statement', [botname])
-        if result.count == 0
+        if result.count > 0
+          Marshal.load(connection.unescape_bytea(result.first['marshal']))
+        else
           str = connection.escape_bytea(Marshal.dump({}))
           sql = "INSERT INTO #{namespace} (botname, marshal) VALUES ($1, $2);"
           connection.prepare('insert_statement', sql)
-
           connection.exec_prepared('insert_statement', [botname, str])
           {}
-        else
-
-          Marshal.load(connection.unescape_bytea(result.first['marshal']))
         end
       end
 
@@ -79,6 +73,7 @@ module Ruboty
             port:     port
           )
           migrate(@connection)
+          prepare_save_and_load_statement(@connection)
         end
         @connection
       end
@@ -118,8 +113,6 @@ module Ruboty
       def migrate(conn)
         unless relation_exists?(conn)
           sql = "CREATE TABLE #{namespace} (botname VARCHAR(240) PRIMARY KEY, marshal BYTEA);"
-          # conn.prepare('migrate_statement', sql)
-          # conn.exec_prepared('migrate_statement', [namespace])
           conn.exec(sql)
           load
         end
@@ -133,8 +126,10 @@ module Ruboty
         result.first['relname'] == namespace
       end
 
-      def column_exists?(conn)
-        sql = "SELECT * FROM #{namespace} WHERE botname = $1;"
+      # only this statment is called repeatedly
+      def prepare_save_and_load_statement(conn)
+        conn.prepare('save_statement', "UPDATE #{namespace} SET marshal = $1 WHERE botname = $2;")
+        conn.prepare('load_statement', "SELECT marshal FROM #{namespace} WHERE botname = $1;")
       end
     end
   end
